@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGameStore } from "./store/useGameStore";
 import ChessBoard from "./components/ChessBoard";
 import { PieceMap } from "./assets/pieces";
 import aiIcon from "./assets/ai_icon.png";
+import { playGameOverSound } from "./utils/sounds";
 
 function App() {
   const {
@@ -23,9 +24,30 @@ function App() {
     soundEnabled,
     history,
     kingInCheck,
+    timer,
+    decrementTimer,
   } = useGameStore();
 
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+
+  // Timer Effect
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
+
+    if (isGameStarted && status === 'playing') {
+      interval = setInterval(() => {
+        if (useGameStore.getState().timer > 0) {
+          decrementTimer();
+        } else {
+          // Timeout handling
+          useGameStore.setState({ status: 'timeout' });
+          if (soundEnabled) playGameOverSound();
+        }
+      }, 1000);
+    }
+
+    return () => clearInterval(interval);
+  }, [isGameStarted, status, decrementTimer, soundEnabled]);
 
   // Status icon
   const getStatusIcon = () => {
@@ -50,6 +72,7 @@ function App() {
     if (status === "checkmate") return "Şah Mat!";
     if (status === "stalemate") return "Pat — Berabere";
     if (status === "draw") return "Berabere";
+    if (status === "timeout") return "Süre Doldu!";
     if (status === "playing") {
       if (kingInCheck) return "Şah Çekildi!";
       if (aiThinking) return "AI Düşünüyor...";
@@ -137,6 +160,37 @@ function App() {
 
         {/* Sidebar Controls */}
         <div className="w-full lg:w-72 flex flex-col gap-4">
+          {/* Timer Display */}
+          {isGameStarted && status !== 'checkmate' && status !== 'draw' && status !== 'stalemate' && (
+            <div className="rounded-xl p-4 flex flex-col items-center justify-center space-y-1 relative overflow-hidden group" style={{
+              background: 'linear-gradient(145deg, #2e3b26, #1a2517)', // Dark green gradient
+              border: '1px solid rgba(100,200,100,0.2)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+            }}>
+               {/* Digital glow effect */}
+               <div className="absolute inset-0 bg-green-500/5 blur-xl group-hover:bg-green-500/10 transition-colors duration-500" />
+               
+               <div className="relative z-10 flex flex-col items-center">
+                 <span className="text-[10px] font-bold text-green-400/60 uppercase tracking-[0.2em] mb-1">
+                   {turn === 'w' ? 'BEYAZ' : 'SİYAH'} SÜRE
+                 </span>
+                 <div className="font-mono text-5xl font-bold tracking-wider text-white tabular-nums drop-shadow-[0_0_10px_rgba(74,222,128,0.5)]">
+                   00:{String(timer).padStart(2, '0')}
+                 </div>
+               </div>
+               
+               {/* Progress bar */}
+               <div className="absolute bottom-0 left-0 h-1 bg-green-500/20 w-full">
+                  <motion.div 
+                    initial={{ width: "100%" }}
+                    animate={{ width: `${(timer / 30) * 100}%` }}
+                    transition={{ duration: 1, ease: "linear" }}
+                    className="h-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)]"
+                  />
+               </div>
+            </div>
+          )}
+
           {/* Status Card */}
           <div className="rounded-xl p-4 space-y-3" style={{
             background: 'linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))',

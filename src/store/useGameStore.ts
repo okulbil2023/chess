@@ -15,7 +15,7 @@ import {
   playPromoteSound,
 } from '../utils/sounds';
 
-export type GameStatus = 'playing' | 'checkmate' | 'stalemate' | 'draw' | 'threefold' | 'insufficient';
+export type GameStatus = 'playing' | 'checkmate' | 'stalemate' | 'draw' | 'threefold' | 'insufficient' | 'timeout';
 export type ThemeMode = 'dark' | 'light';
 export type GameMode = 'ai' | 'pvp';
 
@@ -61,6 +61,11 @@ export interface GameState {
   toggleLegalMoves: () => void;
   setAiDepth: (depth: number) => void;
   getLegalMovesFrom: (square: Square) => Square[];
+  
+  // Timer
+  timer: number;
+  decrementTimer: () => void;
+  resetTimer: () => void;
 }
 
 /** Şahtaki kralın pozisyonunu bul */
@@ -168,6 +173,11 @@ export const useGameStore = create<GameState>((set, get) => ({
   showLegalMoves: true,
   pieceIds: initializePieceIds(new Chess()),
 
+  // Timer Actions
+  timer: 30,
+  decrementTimer: () => set((state) => ({ timer: Math.max(0, state.timer - 1) })),
+  resetTimer: () => set({ timer: 30 }),
+
   toggleLegalMoves: () => set((state) => ({ showLegalMoves: !state.showLegalMoves })),
 
   getLegalMovesFrom: (square: Square): Square[] => {
@@ -256,6 +266,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         kingInCheck: kingSquare,
         pendingPromotion: null,
         pieceIds: updatePieceIds(state.pieceIds, move),
+        timer: 30, // Reset timer on move
       });
 
       // AI hamlesi
@@ -325,6 +336,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       kingInCheck: kingSquare,
       aiThinking: false,
       pieceIds: initializePieceIds(game), // Geri alma sonrası senkronize et
+      timer: 30,
     });
   },
 
@@ -344,6 +356,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       aiThinking: false,
       isGameStarted: false, // Reset ana ekrana döndürür
       pieceIds: initializePieceIds(newGame),
+      timer: 30,
     });
   },
 
@@ -366,6 +379,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       showLegalMoves: true, // Varsayılan açık
       aiThinking: false,
       pieceIds: initializePieceIds(newGame),
+      timer: 30,
     });
   },
 
