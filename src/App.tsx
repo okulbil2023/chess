@@ -64,6 +64,7 @@ function App() {
       );
       return turn === "w" ? "⚪" : "⚫";
     }
+    if (status === "timeout") return "⏳";
     return "🏁";
   };
 
@@ -72,7 +73,9 @@ function App() {
     if (status === "checkmate") return "Şah Mat!";
     if (status === "stalemate") return "Pat — Berabere";
     if (status === "draw") return "Berabere";
-    if (status === "timeout") return "Süre Doldu!";
+    if (status === "timeout") {
+      return turn === "w" ? "Süre Bitti! Siyah Kazandı 🏆" : "Süre Bitti! Beyaz Kazandı 🏆";
+    }
     if (status === "playing") {
       if (kingInCheck) return "Şah Çekildi!";
       if (aiThinking) return "AI Düşünüyor...";
