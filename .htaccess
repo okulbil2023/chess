@@ -1,0 +1,18 @@
+Options -MultiViews
+DirectoryIndex index.html
+
+RewriteEngine On
+RewriteBase /chess/
+
+# Explicitly rewrite asset folder to dist/assets
+RewriteRule ^assets/(.*)$ dist/assets/$1 [L]
+
+# Fallback for other files: if it doesn't exist in root, look in dist
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ dist/$1 [L]
+
+# SPA routing fallback: if it still doesn't exist, serve index.html
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . index.html [L]

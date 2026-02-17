@@ -45,6 +45,7 @@ export interface GameState {
   aiDepth: number;
   theme: ThemeMode;
   soundEnabled: boolean;
+  pieceIds: Record<string, string>; // square -> stableId
   
   // Aksiyonlar
   selectSquare: (square: Square) => void;
@@ -88,6 +89,60 @@ function getGameStatus(game: Chess): GameStatus {
   return 'playing';
 }
 
+/** Taşlara benzersiz ID ata */
+function initializePieceIds(game: Chess): Record<string, string> {
+  const ids: Record<string, string> = {};
+  const board = game.board();
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const p = board[r][c];
+      if (p) {
+        const sq = (String.fromCharCode(97 + c) + (8 - r)) as Square;
+        ids[sq] = `${p.color}${p.type}-${Math.random().toString(36).substr(2, 4)}`;
+      }
+    }
+  }
+  return ids;
+}
+
+/** Taş ID'lerini hamleye göre güncelle */
+function updatePieceIds(currentIds: Record<string, string>, move: Move): Record<string, string> {
+  const nextIds = { ...currentIds };
+  const { from, to, flags } = move;
+
+  // Ana taşı hareket ettir
+  const pieceId = nextIds[from];
+  if (pieceId) {
+    nextIds[to] = pieceId;
+    delete nextIds[from];
+  }
+
+  // Rok durumu - Kaleyi de hareket ettir
+  if (flags.includes('k')) { // King side
+    const rFrom = (from[0] === 'e' ? 'h' + from[1] : 'a' + from[1]) as Square;
+    const rTo = (from[0] === 'e' ? 'f' + from[1] : 'd' + from[1]) as Square;
+    if (nextIds[rFrom]) {
+      nextIds[rTo] = nextIds[rFrom];
+      delete nextIds[rFrom];
+    }
+  } else if (flags.includes('q')) { // Queen side
+    const rFrom = (from[0] === 'e' ? 'a' + from[1] : 'h' + from[1]) as Square;
+    const rTo = (from[0] === 'e' ? 'd' + from[1] : 'f' + from[1]) as Square;
+    if (nextIds[rFrom]) {
+      nextIds[rTo] = nextIds[rFrom];
+      delete nextIds[rFrom];
+    }
+  }
+
+  // En passant - Ekstra taşı sil
+  if (flags.includes('e')) {
+    const epSq = (to[0] + from[1]) as Square;
+    delete nextIds[epSq];
+  }
+
+  return nextIds;
+}
+
 export const useGameStore = create<GameState>((set, get) => ({
   // Initial state
   game: new Chess(),
@@ -111,6 +166,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   theme: 'dark',
   soundEnabled: true,
   showLegalMoves: true,
+  pieceIds: initializePieceIds(new Chess()),
 
   toggleLegalMoves: () => set((state) => ({ showLegalMoves: !state.showLegalMoves })),
 
@@ -199,14 +255,20 @@ export const useGameStore = create<GameState>((set, get) => ({
         lastMove: { from, to },
         kingInCheck: kingSquare,
         pendingPromotion: null,
+        pieceIds: updatePieceIds(state.pieceIds, move),
       });
 
       // AI hamlesi
       if (newStatus === 'playing' && state.gameMode === 'ai' && game.turn() === 'b') {
         set({ aiThinking: true });
         findBestMoveAsync(game.fen(), state.aiDepth).then((aiMove) => {
+          const currentState = get();
+          // Oyun sıfırlanmış veya mod değişmiş olabilir
+          if (!currentState.isGameStarted || currentState.gameMode !== 'ai') {
+            set({ aiThinking: false });
+            return;
+          }
           if (aiMove) {
-            const currentState = get();
             if (currentState.status === 'playing' && currentState.gameMode === 'ai') {
               currentState.makeMove(aiMove.from as Square, aiMove.to as Square, aiMove.promotion as PieceSymbol | undefined);
             }
@@ -234,6 +296,11 @@ export const useGameStore = create<GameState>((set, get) => ({
     const state = get();
     const { game, gameMode } = state;
     
+    // Yetersiz hamle kontrolü
+    const historyLen = game.history().length;
+    if (gameMode === 'ai' && historyLen < 2) return;
+    if (gameMode === 'pvp' && historyLen < 1) return;
+
     // AI modunda 2 hamle geri al (oyuncunun ve AI'ın hamlesi)
     if (gameMode === 'ai') {
       game.undo();
@@ -257,6 +324,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       lastMove: lastHistMove ? { from: lastHistMove.from, to: lastHistMove.to } : null,
       kingInCheck: kingSquare,
       aiThinking: false,
+      pieceIds: initializePieceIds(game), // Geri alma sonrası senkronize et
     });
   },
 
@@ -275,6 +343,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       pendingPromotion: null,
       aiThinking: false,
       isGameStarted: false, // Reset ana ekrana döndürür
+      pieceIds: initializePieceIds(newGame),
     });
   },
 
@@ -294,8 +363,9 @@ export const useGameStore = create<GameState>((set, get) => ({
       lastMove: null,
       kingInCheck: null,
       pendingPromotion: null,
-      showLegalMoves: false, // Varsayılan kapalı
+      showLegalMoves: true, // Varsayılan açık
       aiThinking: false,
+      pieceIds: initializePieceIds(newGame),
     });
   },
 

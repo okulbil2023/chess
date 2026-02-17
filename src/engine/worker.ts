@@ -89,6 +89,13 @@ const PST_MAP: Record<PieceSymbol, number[]> = {
 
 /** Pozisyon değerlendirmesi */
 function evaluate(game: Chess): number {
+  if (game.isCheckmate()) {
+    return game.turn() === 'w' ? -100000 : 100000;
+  }
+  if (game.isDraw() || game.isStalemate() || game.isThreefoldRepetition() || game.isInsufficientMaterial()) {
+    return 0;
+  }
+
   let score = 0;
   const board = game.board();
 

@@ -1,7 +1,6 @@
 /**
  * Piece Component
  * Satranç taşını SVG olarak render eder.
- * Sürükle-bırak desteği pointer events ile.
  */
 import React, { useCallback, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
@@ -14,17 +13,17 @@ interface PieceProps {
   squareSize: number;
   onDragStart: (square: ChessSquare) => void;
   onDragEnd: (square: ChessSquare | null) => void;
-  isDragging: boolean;
+  pieceId?: string;
 }
 
-const Piece: React.FC<PieceProps> = ({ type, square, squareSize, onDragStart, onDragEnd }) => {
+const Piece: React.FC<PieceProps> = ({ type, square, squareSize, onDragStart, onDragEnd, pieceId }) => {
   const pieceRef = useRef<HTMLDivElement>(null);
   const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
   const draggingRef = useRef(false);
   const startPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
   const PieceComponent = PieceMap[type];
-  const pieceSize = squareSize * 0.85;
+  const pieceSize = squareSize * 0.88;
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     e.preventDefault();
@@ -54,7 +53,6 @@ const Piece: React.FC<PieceProps> = ({ type, square, squareSize, onDragStart, on
     const el = e.currentTarget as HTMLElement;
     el.releasePointerCapture(e.pointerId);
     
-    // Bırakılan konumdaki kareyi hesapla
     const boardEl = el.closest('[data-board]');
     if (boardEl) {
       const boardRect = boardEl.getBoundingClientRect();
@@ -80,27 +78,44 @@ const Piece: React.FC<PieceProps> = ({ type, square, squareSize, onDragStart, on
 
   if (!PieceComponent) return null;
 
+  const isDraggingNow = !!dragPos;
+  
+  // Siyah taşlar için özel gölgelendirme (biraz daha belirgin)
+  const isBlack = type.startsWith('b');
+  
+  // Gölge stilleri
+  const restingShadow = isBlack
+    ? 'drop-shadow(0 2px 2px rgba(0,0,0,0.5)) drop-shadow(0 5px 4px rgba(0,0,0,0.2))' 
+    : 'drop-shadow(0 2px 2px rgba(0,0,0,0.3)) drop-shadow(0 4px 3px rgba(0,0,0,0.1))';
+    
+  const draggingShadow = 'drop-shadow(0 15px 20px rgba(0,0,0,0.5)) drop-shadow(0 5px 10px rgba(0,0,0,0.3))';
+
   return (
     <motion.div
       ref={pieceRef}
-      className="absolute cursor-grab active:cursor-grabbing select-none"
+      layout
+      layoutId={pieceId}
+      className="absolute select-none"
       style={{
         width: pieceSize,
         height: pieceSize,
         top: (squareSize - pieceSize) / 2,
         left: (squareSize - pieceSize) / 2,
-        zIndex: dragPos ? 100 : 10,
-        transform: dragPos ? `translate(${dragPos.x}px, ${dragPos.y}px)` : undefined,
-        filter: dragPos ? 'drop-shadow(0 8px 16px rgba(0,0,0,0.4))' : 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))',
-        transition: dragPos ? 'none' : 'filter 0.2s ease',
+        zIndex: isDraggingNow ? 100 : 10,
+        transform: isDraggingNow ? `translate(${dragPos.x}px, ${dragPos.y}px)` : undefined,
+        filter: isDraggingNow ? draggingShadow : restingShadow,
+        transition: isDraggingNow ? 'none' : 'filter 0.2s ease, transform 0.15s ease',
         pointerEvents: 'auto',
+        cursor: isDraggingNow ? 'grabbing' : 'grab',
+        // Taşın görsel netliği için
+        willChange: 'transform, filter',
       }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       initial={false}
-      animate={!dragPos ? { scale: 1 } : { scale: 1.15 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+      animate={!isDraggingNow ? { scale: 1, y: 0 } : { scale: 1.15, y: -5 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 25 }}
     >
       <PieceComponent size={pieceSize} />
     </motion.div>
