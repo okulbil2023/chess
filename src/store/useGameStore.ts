@@ -124,15 +124,15 @@ function updatePieceIds(currentIds: Record<string, string>, move: Move): Record<
 
   // Rok durumu - Kaleyi de hareket ettir
   if (flags.includes('k')) { // King side
-    const rFrom = (from[0] === 'e' ? 'h' + from[1] : 'a' + from[1]) as Square;
-    const rTo = (from[0] === 'e' ? 'f' + from[1] : 'd' + from[1]) as Square;
+    const rFrom = ('h' + from[1]) as Square;
+    const rTo = ('f' + from[1]) as Square;
     if (nextIds[rFrom]) {
       nextIds[rTo] = nextIds[rFrom];
       delete nextIds[rFrom];
     }
   } else if (flags.includes('q')) { // Queen side
-    const rFrom = (from[0] === 'e' ? 'a' + from[1] : 'h' + from[1]) as Square;
-    const rTo = (from[0] === 'e' ? 'd' + from[1] : 'f' + from[1]) as Square;
+    const rFrom = ('a' + from[1]) as Square;
+    const rTo = ('d' + from[1]) as Square;
     if (nextIds[rFrom]) {
       nextIds[rTo] = nextIds[rFrom];
       delete nextIds[rFrom];

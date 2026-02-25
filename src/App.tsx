@@ -36,12 +36,14 @@ function App() {
 
     if (isGameStarted && status === 'playing') {
       interval = setInterval(() => {
-        if (useGameStore.getState().timer > 0) {
-          decrementTimer();
-        } else {
+        const currentTimer = useGameStore.getState().timer;
+        if (currentTimer <= 0) {
           // Timeout handling
-          useGameStore.setState({ status: 'timeout' });
+          useGameStore.setState({ status: 'timeout', aiThinking: false });
           if (soundEnabled) playGameOverSound();
+          clearInterval(interval);
+        } else {
+          decrementTimer();
         }
       }, 1000);
     }
@@ -164,7 +166,7 @@ function App() {
         {/* Sidebar Controls */}
         <div className="w-full lg:w-72 flex flex-col gap-4">
           {/* Timer Display */}
-          {isGameStarted && status !== 'checkmate' && status !== 'draw' && status !== 'stalemate' && (
+          {isGameStarted && status === 'playing' && (
             <div className="rounded-xl p-4 flex flex-col items-center justify-center space-y-1 relative overflow-hidden group" style={{
               background: 'linear-gradient(145deg, #2e3b26, #1a2517)', // Dark green gradient
               border: '1px solid rgba(100,200,100,0.2)',

@@ -109,7 +109,7 @@ const ChessBoard: React.FC = () => {
   const handleDragStart = useCallback((square: ChessSquare) => {
     const piece = game.get(square);
     if (piece && piece.color === game.turn()) {
-      if (useGameStore.getState().aiEnabled && game.turn() === 'b') return;
+      if (useGameStore.getState().gameMode === 'ai' && game.turn() === 'b') return;
       setDraggingFrom(square);
       setDragLegalMoves(getLegalMovesFrom(square));
       selectSquare(square);
